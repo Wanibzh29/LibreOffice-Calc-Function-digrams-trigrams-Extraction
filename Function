@@ -1,0 +1,133 @@
+Sub ExtraireDiTriGrammesFrequences_Portable()
+    Dim oDoc As Object, oSheet As Object, oOut As Object
+    Dim oCellRange As Object, oData As Variant
+    Dim i As Long, j As Long, n As Long
+    Dim mot As String, di As String, tri As String
+
+    ' tableaux pour stocker clés et comptes (digrammes)
+    Dim dKeys() As String, dCounts() As Long
+    Dim tKeys() As String, tCounts() As Long
+    Dim dN As Long, tN As Long
+    dN = 0 : tN = 0
+
+    oDoc = ThisComponent
+    oSheet = oDoc.Sheets(0) ' feuille contenant le lexique (adapter si besoin)
+
+    ' modifier la plage ici si nécessaire
+    oCellRange = oSheet.getCellRangeByName("A1:A500")
+    oData = oCellRange.getDataArray()
+
+    ' --- parcourir les mots ---
+    For i = LBound(oData) To UBound(oData)
+        mot = Trim(oData(i)(0))
+        If mot = "" Then GoTo NextRow
+
+        mot = CleanWord(mot)  ' nettoyage : espaces, accents, majuscules, etc.
+        n = Len(mot)
+        If n < 2 Then GoTo NextRow
+
+        ' digrammes
+        For j = 1 To n - 1
+            di = Mid(mot, j, 2)
+            IncCount(dKeys, dCounts, dN, di)
+        Next j
+
+        ' trigrammes
+        If n >= 3 Then
+            For j = 1 To n - 2
+                tri = Mid(mot, j, 3)
+                IncCount(tKeys, tCounts, tN, tri)
+            Next j
+        End If
+
+NextRow:
+    Next i
+
+    ' --- préparer feuille résultat ---
+    If Not oDoc.Sheets.hasByName("Grammes") Then
+        oDoc.Sheets.insertNewByName("Grammes", 1)
+    End If
+    oOut = oDoc.Sheets.getByName("Grammes")
+    oOut.clearContents(1023)
+
+    ' écrire digrammes
+    oOut.getCellByPosition(0,0).String = "Digramme"
+    oOut.getCellByPosition(1,0).String = "Fréquence"
+    For i = 0 To dN - 1
+        oOut.getCellByPosition(0, i+1).String = dKeys(i)
+        oOut.getCellByPosition(1, i+1).Value = dCounts(i)
+    Next i
+
+    ' écrire trigrammes
+    oOut.getCellByPosition(3,0).String = "Trigramme"
+    oOut.getCellByPosition(4,0).String = "Fréquence"
+    For i = 0 To tN - 1
+        oOut.getCellByPosition(3, i+1).String = tKeys(i)
+        oOut.getCellByPosition(4, i+1).Value = tCounts(i)
+    Next i
+
+    MsgBox "Terminé : " & dN & " digrammes, " & tN & " trigrammes."
+End Sub
+
+' --- sous-routine : incrémenter un compteur stocké dans tableaux (clé / count) ---
+Sub IncCount(ByRef keys() As String, ByRef counts() As Long, ByRef n As Long, ByVal key As String)
+    Dim idx As Long
+    If n > 0 Then
+        For idx = 0 To n - 1
+            If keys(idx) = key Then
+                counts(idx) = counts(idx) + 1
+                Exit Sub
+            End If
+        Next idx
+    End If
+    ' si on arrive ici, clé absente -> l'ajouter
+    ReDim Preserve keys(n)
+    ReDim Preserve counts(n)
+    keys(n) = key
+    counts(n) = 1
+    n = n + 1
+End Sub
+
+' --- nettoyage minimal du mot : suppression d'espaces, accents -> majuscules, suppression des caractères non lettres ---
+Function CleanWord(ByVal s As String) As String
+    Dim r As String
+    r = Trim(s)
+    r = UCase(r)
+
+    ' remplacer quelques accents courants par lettres simples
+    r = Replace(r, "À", "A")
+    r = Replace(r, "Á", "A")
+    r = Replace(r, "Â", "A")
+    r = Replace(r, "Ä", "A")
+    r = Replace(r, "È", "E")
+    r = Replace(r, "É", "E")
+    r = Replace(r, "Ê", "E")
+    r = Replace(r, "Ë", "E")
+    r = Replace(r, "Ì", "I")
+    r = Replace(r, "Í", "I")
+    r = Replace(r, "Î", "I")
+    r = Replace(r, "Ï", "I")
+    r = Replace(r, "Ò", "O")
+    r = Replace(r, "Ó", "O")
+    r = Replace(r, "Ô", "O")
+    r = Replace(r, "Ö", "O")
+    r = Replace(r, "Ù", "U")
+    r = Replace(r, "Ú", "U")
+    r = Replace(r, "Û", "U")
+    r = Replace(r, "Ü", "U")
+    r = Replace(r, "Ç", "C")
+    r = Replace(r, "Ñ", "N")
+
+    ' supprimer tout caractère non lettre (garde A..Z)
+    Dim out As String, ch As String
+    Dim i As Long
+    out = ""
+    For i = 1 To Len(r)
+        ch = Mid(r, i, 1)
+        If ch >= "A" And ch <= "Z" Then
+            out = out & ch
+        End If
+    Next i
+
+    CleanWord = out
+End Function
