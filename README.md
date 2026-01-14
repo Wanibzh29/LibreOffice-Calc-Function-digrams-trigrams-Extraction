@@ -1,4 +1,4 @@
-# LibreOffice-Calc-Function-DiTriGrammes-Frequences
+# LibreOffice Calc function digramms and trigramms extraction
 A function to generate a list of digramms and trigramms and sort them by frequences.
 
 ## I. Licences
